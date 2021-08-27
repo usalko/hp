@@ -11,6 +11,17 @@ plugins {
     id 'java-library'
 }
 
+java {
+    withJavadocJar()
+    withSourcesJar()
+
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(8)
+        vendor = JvmVendorSpec.ADOPTOPENJDK
+        implementation = JvmImplementation.VENDOR_SPECIFIC
+    }
+}
+
 repositories {
     // Use Maven Central for resolving dependencies.
     mavenCentral()

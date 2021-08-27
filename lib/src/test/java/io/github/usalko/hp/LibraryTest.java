@@ -3,12 +3,35 @@
  */
 package io.github.usalko.hp;
 
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
 import org.junit.jupiter.api.Test;
-import static org.junit.jupiter.api.Assertions.*;
+import reactor.core.publisher.Flux;
+import reactor.netty.ByteBufFlux;
+import reactor.netty.http.client.HttpClient;
 
 class LibraryTest {
-    @Test void someLibraryMethodReturnsTrue() {
+
+    @Test
+    void someLibraryMethodReturnsTrue() {
         Library classUnderTest = new Library();
         assertTrue(classUnderTest.someLibraryMethod(), "someLibraryMethod should return 'true'");
+    }
+
+    @Test
+    void simpleHttpRequest() {
+        String response = HttpClient.create()           // Prepares an HTTP client ready for configuration
+                .host("google.com")
+                .port(80)  // Obtains the server's port and provides it as a port to which this
+                // client should connect
+                .get()               // Specifies that POST method will be used
+                .uri("/")   // Specifies the path
+                .responseContent()    // Receives the response body
+                .aggregate()
+                .asString()
+                .log("http-client")
+                .block();
+        assertNotNull(response);
     }
 }
