@@ -12,3 +12,18 @@ gradle-app.setting
 
 # # Work around https://youtrack.jetbrains.com/issue/IDEA-116898
 # gradle/wrapper/gradle-wrapper.properties
+
+# Ignore Gradle build output directory
+build
+# Ignore other build tools outputs
+bin
+
+# IDE stuff
+.idea
+*.iml
+.vscode
+.project
+.settings
+.classpath
+
+
