@@ -1,2 +1,3 @@
 # hp
-HLS to MP4 requests proxy library
+
+A simple library to support HLS to MP4 proxy
