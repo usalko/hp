@@ -1,17 +1,24 @@
 /**
  * Copyright 2015 Comcast Cable Communications Management, LLC
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * <p>
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except
+ * in compliance with the License. You may obtain a copy of the License at
+ * <p>
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * <p>
+ * Unless required by applicable law or agreed to in writing, software distributed under the License
+ * is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express
+ * or implied. See the License for the specific language governing permissions and limitations under
+ * the License.
+ * <p>
+ * TO-DO: Add tests for: byte range, allow cache, iframes only, discontinuity Create objects for:
+ * ext-x-map, ext-x-i-frame-stream-inf, ext-x-start, ext-x-discontinuity-sequence
+ * <p>
+ * TO-DO: Add tests for: byte range, allow cache, iframes only, discontinuity Create objects for:
+ * ext-x-map, ext-x-i-frame-stream-inf, ext-x-start, ext-x-discontinuity-sequence
+ * <p>
+ * TO-DO: Add tests for: byte range, allow cache, iframes only, discontinuity Create objects for:
+ * ext-x-map, ext-x-i-frame-stream-inf, ext-x-start, ext-x-discontinuity-sequence
  */
 /**
  * TO-DO:
@@ -20,19 +27,13 @@
  */
 package io.github.usalko.hp.parser;
 
+import io.github.usalko.hp.parser.v12.MasterPlaylistV12;
+import io.github.usalko.hp.parser.v12.MediaPlaylistV12;
+import io.netty.channel.ChannelOption;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URL;
-
-import org.apache.http.HttpStatus;
-import org.apache.http.client.config.RequestConfig;
-import org.apache.http.client.methods.CloseableHttpResponse;
-import org.apache.http.client.methods.HttpGet;
-import org.apache.http.impl.client.CloseableHttpClient;
-import org.apache.http.impl.client.HttpClientBuilder;
-
-import io.github.usalko.hp.parser.v12.MasterPlaylistV12;
-import io.github.usalko.hp.parser.v12.MediaPlaylistV12;
+import reactor.netty.http.client.HttpClient;
 
 /**
  * Provides factory methods to generate and parse playlists.
@@ -95,27 +96,25 @@ public class PlaylistFactory {
      * @throws IOException on connection and parsing exceptions
      */
     public static AbstractPlaylist parsePlaylist(final PlaylistVersion playlistVersion,
-            final URL playlistURL, final int connectTimeout, final int requestTimeout,
-            final int socketTimeout) throws IOException {
-
-        RequestConfig.Builder requestBuilder = RequestConfig.custom();
-        requestBuilder = requestBuilder.setConnectTimeout(connectTimeout);
-        requestBuilder = requestBuilder.setConnectionRequestTimeout(requestTimeout);
-        requestBuilder = requestBuilder.setSocketTimeout(socketTimeout);
-
-        final HttpClientBuilder builder = HttpClientBuilder.create();
-        builder.setDefaultRequestConfig(requestBuilder.build());
-        final CloseableHttpClient httpClient = builder.build();
-        final PlaylistParser parser = new PlaylistParser();
-
-        try {
-            final InputStream playlistStream = getPlaylistInputStream(httpClient, playlistURL);
-            parser.parse(playlistStream);
-        } finally {
-            httpClient.close();
+            final URL playlistURL, final int connectTimeout) {
+        HttpClient client = HttpClient.create()
+                .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, connectTimeout)
+                .compress(true);
+        if (playlistURL.getProtocol().equalsIgnoreCase("https")) {
+            client = client.secure();
         }
 
-        return getVersionSpecificPlaylist(parser, playlistVersion);
+        return client
+                .get()
+                .uri(playlistURL.toString())
+                .responseContent()
+                .aggregate()
+                .asString()
+                .map(response -> {
+                    final PlaylistParser parser = new PlaylistParser();
+                    parser.parse(response);
+                    return getVersionSpecificPlaylist(parser, playlistVersion);
+                }).block();
     }
 
     /**
@@ -130,16 +129,16 @@ public class PlaylistFactory {
         AbstractPlaylist playlist = null;
 
         switch (playlistVersion) {
-        case TWELVE:
-        case DEFAULT:
-        default:
-            if (parser.isMasterPlaylist()) {
-                playlist = new MasterPlaylistV12(parser.getTags());
-            } else {
-                playlist = new MediaPlaylistV12(parser.getTags());
-            }
+            case TWELVE:
+            case DEFAULT:
+            default:
+                if (parser.isMasterPlaylist()) {
+                    playlist = new MasterPlaylistV12(parser.getTags());
+                } else {
+                    playlist = new MediaPlaylistV12(parser.getTags());
+                }
 
-            break;
+                break;
         }
 
         return playlist;
@@ -152,20 +151,20 @@ public class PlaylistFactory {
      * @return inputStream
      * @throws IOException on HTTP connection exception
      */
-    private static InputStream getPlaylistInputStream(final CloseableHttpClient httpClient,
-            final URL url) throws IOException {
-        final HttpGet get = new HttpGet(url.toString());
-        CloseableHttpResponse response = null;
-        response = httpClient.execute(get);
-        if (response == null) {
-            throw new IOException("Request returned a null response");
-        }
-        if (response.getStatusLine().getStatusCode() != HttpStatus.SC_OK) {
-            response.close();
-            throw new IOException("Request returned a status code of "
-                    + response.getStatusLine().getStatusCode());
-        }
-
-        return response.getEntity().getContent();
-    }
+    //private static InputStream getPlaylistInputStream(final CloseableHttpClient httpClient,
+    //        final URL url) throws IOException {
+    //    final HttpGet get = new HttpGet(url.toString());
+    //    CloseableHttpResponse response = null;
+    //    response = httpClient.execute(get);
+    //    if (response == null) {
+    //        throw new IOException("Request returned a null response");
+    //    }
+    //    if (response.getStatusLine().getStatusCode() != HttpStatus.SC_OK) {
+    //        response.close();
+    //        throw new IOException("Request returned a status code of "
+    //                + response.getStatusLine().getStatusCode());
+    //    }
+    //
+    //    return response.getEntity().getContent();
+    //}
 }

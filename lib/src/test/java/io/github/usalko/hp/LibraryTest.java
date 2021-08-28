@@ -3,12 +3,24 @@
  */
 package io.github.usalko.hp;
 
+import static java.text.MessageFormat.format;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import io.github.usalko.hp.parser.IPlaylist;
+import io.github.usalko.hp.parser.MasterPlaylist;
+import io.github.usalko.hp.parser.MediaPlaylist;
+import io.github.usalko.hp.parser.PlaylistFactory;
+import io.github.usalko.hp.parser.PlaylistVersion;
+import io.github.usalko.hp.parser.tags.master.StreamInf;
+import java.io.IOException;
+import java.net.URL;
+import java.time.Duration;
+import java.time.temporal.ChronoUnit;
+import java.util.ArrayList;
+import java.util.List;
 import org.junit.jupiter.api.Test;
-import reactor.core.publisher.Flux;
-import reactor.netty.ByteBufFlux;
 import reactor.netty.http.client.HttpClient;
 
 class LibraryTest {
@@ -33,5 +45,56 @@ class LibraryTest {
                 .log("http-client")
                 .block();
         assertNotNull(response);
+    }
+
+    @Test
+    void parserMasterListTest() throws IOException {
+        List<String> messages = new ArrayList<>();
+
+        URL masterListUrl = new URL(
+                "https://cdn.zefshar.com/videos/31836_pWjXWuGkVG3utgRQ/master.m3u8");
+        IPlaylist playlist = PlaylistFactory.parsePlaylist(PlaylistVersion.TWELVE,
+                masterListUrl,
+                (int) Duration.of(2, ChronoUnit.SECONDS).toMillis());
+
+        URL topBitrateVariant = null;
+        if (playlist.isMasterPlaylist()) {
+
+            MasterPlaylist mp = (MasterPlaylist) playlist;
+            for (StreamInf stream : mp.getVariantStreams()) {
+                messages.add(
+                        format(
+                                "Program ID: [{0}]; Bandwidth: [{1}]; Codecs: [{2}]; Resolution: [{3}]; URI: [{4}];",
+                                stream.getProgramId(),
+                                String.valueOf(stream.getBandwidth()),
+                                stream.getCodecs(),
+                                stream.getResolution(),
+                                stream.getURI()));
+            }
+
+            int highestBitrate = Integer.MIN_VALUE;
+            for (StreamInf variant : ((MasterPlaylist) playlist).getVariantStreams()) {
+                if (variant.getBandwidth() > highestBitrate) {
+                    topBitrateVariant = U.from(masterListUrl).replacePathSegment(-1, variant.getURI()).toUrl();
+                }
+            }
+        }
+        System.out.println(format("Messages are: {0}", messages));
+        assertFalse(messages.isEmpty());
+        System.out.println(format("Top bitrate variant is: {0}", topBitrateVariant));
+        assertNotNull(topBitrateVariant);
+    }
+
+    @Test
+    void parserTsListTest() throws IOException {
+        List<String> messages = new ArrayList<>();
+
+        URL masterListUrl = new URL(
+                "https://cdn.zefshar.com/videos/31836_pWjXWuGkVG3utgRQ/index-svod360n-v1-a1.m3u8");
+        IPlaylist playlist = PlaylistFactory.parsePlaylist(PlaylistVersion.TWELVE,
+                masterListUrl,
+                (int) Duration.of(2, ChronoUnit.SECONDS).toMillis());
+        assertTrue(playlist instanceof MediaPlaylist);
+        System.out.println(format("Media play list for {0}: {1}", masterListUrl, ((MediaPlaylist) playlist)));
     }
 }
