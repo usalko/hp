@@ -37,6 +37,10 @@ dependencies {
     // Define dependencies without versions
     implementation 'io.projectreactor.netty:reactor-netty-core'
     implementation 'io.projectreactor.netty:reactor-netty-http'
+
+    // JCodec https://github.com/jcodec/jcodec
+    implementation 'org.jcodec:jcodec:0.2.5'
+
 }
 
 tasks.named('test') {
