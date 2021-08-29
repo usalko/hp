@@ -90,10 +90,7 @@ public class PlaylistFactory {
      * @param playlistVersion version of the playlist (V12 is the default)
      * @param playlistURL URL pointing to a playlist
      * @param connectTimeout timeout (ms) until a connection with the server is established
-     * @param requestTimeout timeout (ms) used when requesting a connection from the connection manager
-     * @param socketTimeout timeout (ms) waiting for data or a max period inactivity between 2 consecutive data packets
      * @return parsed playlist
-     * @throws IOException on connection and parsing exceptions
      */
     public static AbstractPlaylist parsePlaylist(final PlaylistVersion playlistVersion,
             final URL playlistURL, final int connectTimeout) {
